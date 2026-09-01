@@ -1,1 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>SYSTEM_TERMINAL // v2.0</title>
 
+  <!-- Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <!-- Monetag Rewarded Interstitial Tag (Zone: 11448025) -->
+  <script src="https://libtl.com/sdk.js" data-zone="11448025" data-sdk="show_11448025"></script>
+
+  <style>
+    :root {
+      --bg-color: #05080a;
+      --card-bg: rgba(10, 16, 22, 0.92);
+      --text-main: #e0e6ed;
+      --text-muted: #6272a4;
+      --accent-color: #00ff66;
+      --glow-color: rgba(0, 255, 102, 0.4);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: 'Fira Code', Consolas, Monaco, monospace;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* CRT Scanline Overlay */
+    body::before {
+      content: " ";
+      display: block;
+      position: absolute;
+      top: 0; left: 0; bottom: 0; right: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                  linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+      z-index: 99;
+      background-size: 100% 3px, 6px 100%;
+      pointer-events: none;
+    }
+
+    .terminal-container {
+      width: 100%;
+      max-width: 440px;
+      background: var(--card-bg);
+      border: 1px solid var(--accent-color);
+      box-shadow: 0 0 20px var(--glow-color), inset 0 0 10px var(--glow-color);
+      border-radius: 8px;
+      padding: 20px;
+      position: relative;
+      z-index: 100;
+      backdrop-filter: blur(8px);
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .terminal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px dashed var(--accent-color);
+      padding-bottom: 12px;
+      margin-bottom: 16px;
+      transition: border-color 0.3s ease;
+    }
+
+    .terminal-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent-color);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-shadow: 0 0 8px var(--glow-color);
+      transition: color 0.3s ease, text-shadow 0.3s ease;
+    }
+
+    .sys-status {
+      font-size: 0.7rem;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 3px 8px;
+      border-radius: 4px;
+      color: var(--accent-color);
+      border: 1px solid var(--accent-color);
+      transition: color 0.3s ease, border-color 0.3s ease;
+    }
+
+    .user-info-box {
+      background: rgba(0, 0, 0, 0.5);
+      border-left: 3px solid var(--accent-color);
+      padding: 12px;
+      margin-bottom: 20px;
+      font-size: 0.8rem;
+      line-height: 1.6;
+      transition: border-color 0.3s ease;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .info-label {
+      color: var(--text-muted);
+    }
+
+    .info-value {
+      color: var(--text-main);
+      font-weight: 600;
+    }
+
+    .reward-badge {
+      text-align: center;
+      padding: 16px;
+      margin-bottom: 20px;
+      border: 1px solid var(--accent-color);
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 6px;
+      box-shadow: inset 0 0 15px var(--glow-color);
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .reward-value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--accent-color);
+      text-shadow: 0 0 12px var(--glow-color);
+      margin-bottom: 4px;
+      transition: color 0.3s ease, text-shadow 0.3s ease;
+    }
+
+    .reward-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+    }
+
+    .console-box {
+      background: #020304;
+      border: 1px solid #1a2332;
+      border-radius: 4px;
+      padding: 12px;
+      height: 110px;
+      overflow-y: auto;
+      font-size: 0.75rem;
+      color: #a0aec0;
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+
+    .console-line {
+      margin-bottom: 4px;
+      word-break: break-all;
+    }
+
+    .console-line.highlight {
+      color: var(--accent-color);
+      transition: color 0.3s ease;
+    }
+
+    .cursor {
+      display: inline-block;
+      width: 8px;
+      height: 12px;
+      background-color: var(--accent-color);
+      margin-left: 4px;
+      vertical-align: middle;
+      animation: blink 0.8s infinite;
+      transition: background-color 0.3s ease;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    .btn-action {
+      width: 100%;
+      padding: 16px;
+      background: transparent;
+      color: var(--accent-color);
+      border: 2px solid var(--accent-color);
+      font-family: 'Fira Code', monospace;
+      font-size: 0.9rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+      border-radius: 6px;
+      box-shadow: 0 0 10px var(--glow-color);
+      transition: all 0.2s ease;
+    }
+
+    .btn-action:hover:not(:disabled) {
+      background: var(--accent-color);
+      color: #000;
+      box-shadow: 0 0 25px var(--accent-color);
+    }
+
+    .btn-action:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      border-color: var(--text-muted);
+      color: var(--text-muted);
+      box-shadow: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="terminal-container">
+    <div class="terminal-header">
+      <div class="terminal-title">SYSTEM_TERMINAL // v2.0</div>
+      <div class="sys-status">ONLINE</div>
+    </div>
+
+    <div class="user-info-box">
+      <div class="info-row">
+        <span class="info-label">username:</span>
+        <span class="info-value" id="user-username">FETCHING...</span>
+      </div>
+      <div class="info-row" style="margin-top: 6px;">
+        <span class="info-label">CHAT_ID:</span>
+        <span class="info-value" id="user-system-id">000000000</span>
+      </div>
+    </div>
+
+    <div class="reward-badge">
+      <div class="reward-value">+1 PTS</div>
+      <div class="reward-label">REWARD UNLOCK AUTHORIZATION</div>
+    </div>
+
+    <div class="console-box" id="console-logs">
+      <div class="console-line">[ADD_Terminal] Terminal operational...</div>
+      <div class="console-line">[ADD_Terminal] Getting Rady For User.... </div>
+      <div class="console-line">[ADD_Terminal] Ready For User</div>
+      <div class="console-line highlight" id="active-line">> AWAITING EXECUTION<span class="cursor"></span></div>
+    </div>
+
+    <button class="btn-action" id="ad-btn" onclick="watchAd()">
+      [ WATCH AD &amp; CLAIM +1 PTS ]
+    </button>
+  </div>
+
+  <script>
+    // -------------------------------------------------------------
+    // 1. 0.6s Dynamic RGB Color Shift Engine
+    // -------------------------------------------------------------
+    const cyberColors = ['#00ff66', '#00e5ff', '#ff0055', '#ffcc00', '#b000ff','#f7f5f5','#8000ff','#001eff'];
+    let colorIndex = 0;
+
+    setInterval(() => {
+      const activeColor = cyberColors[colorIndex];
+      document.documentElement.style.setProperty('--accent-color', activeColor);
+      document.documentElement.style.setProperty('--glow-color', activeColor + '55');
+      colorIndex = (colorIndex + 1) % cyberColors.length;
+    }, 600);
+
+    // -------------------------------------------------------------
+    // 2. Telegram WebApp Data Extraction
+    // -------------------------------------------------------------
+    const tg = window.Telegram.WebApp;
+    if (tg) {
+      tg.expand();
+      if (tg.ready) tg.ready();
+    }
+
+    const userData = tg.initDataUnsafe?.user;
+    const usernameName = userData?.username 
+      ? `@${userData.username}` 
+      : (userData?.first_name ? userData.first_name : "GUEST_username");
+    const systemId = userData?.id ? userData.id : "OFFLINE_SESSION";
+
+    document.getElementById('user-username').textContent = usernameName;
+    document.getElementById('user-system-id').textContent = systemId;
+
+    // -------------------------------------------------------------
+    // 3. Console Helper Engine
+    // -------------------------------------------------------------
+    const consoleLogs = document.getElementById('console-logs');
+
+    function writeConsole(msg, isHighlight = false) {
+      const currentActive = document.getElementById('active-line');
+      if (currentActive) {
+        currentActive.removeAttribute('id');
+        currentActive.innerHTML = currentActive.textContent.replace('█', '');
+      }
+
+      const newLog = document.createElement('div');
+      newLog.className = isHighlight ? 'console-line highlight' : 'console-line';
+      newLog.id = 'active-line';
+      newLog.innerHTML = `> ${msg}<span class="cursor"></span>`;
+      
+      consoleLogs.appendChild(newLog);
+      consoleLogs.scrollTop = consoleLogs.scrollHeight;
+    }
+
+    // -------------------------------------------------------------
+    // 4. Direct Monetag Execution
+    // -------------------------------------------------------------
+    function watchAd() {
+      const btn = document.getElementById('ad-btn');
+      btn.disabled = true;
+      btn.textContent = "[ INITIALIZING ADD ENGINE... ]";
+      
+      writeConsole("REQUESTING AD FROM SERVER...");
+
+      if (typeof show_11448025 === 'function') {
+        show_11448025(systemId)
+          .then(() => {
+            writeConsole("AD COMPLETED SUCCESSFULLY! VERIFYING REWARD...", true);
+            giveReward();
+          })
+          .catch((err) => {
+            console.warn("Monetag Notice:", err);
+            writeConsole("⚡ AD TEMPORARILY BUSY. TAP BUTTON AGAIN!", true);
+            resetButton();
+          });
+      } else if (typeof window.show_11448025 === 'function') {
+        window.show_11448025(systemId)
+          .then(() => {
+            writeConsole("AD COMPLETED SUCCESSFULLY! VERIFYING REWARD...", true);
+            giveReward();
+          })
+          .catch((err) => {
+            console.warn("Monetag Notice:", err);
+            writeConsole("⚡ AD TEMPORARILY BUSY. TAP BUTTON AGAIN!", true);
+            resetButton();
+          });
+      } else {
+        writeConsole("😁বেশি চালাকি না করে ADDBLOCKER বন্ধ করুন😁", true);
+        setTimeout(resetButton, 1500);
+      }
+    }
+
+    function resetButton() {
+      const btn = document.getElementById('ad-btn');
+      btn.disabled = false;
+      btn.textContent = "[ WATCH AD & CLAIM +1 PTS ]";
+    }
+
+    // -------------------------------------------------------------
+    // 5. Bot Reward Dispatcher Engine (CORS Fixed Fetch)
+    // -------------------------------------------------------------
+    function giveReward() {
+      try {
+        if (tg.HapticFeedback) {
+          tg.HapticFeedback.notificationOccurred('success');
+        }
+      } catch (e) {}
+
+      writeConsole("DISPATCHING +1 PTS PAYLOAD TO BOT...", true);
+
+      fetch('https://sms-vercel-six.vercel.app/api/claim-reward', {
+        method: 'POST',
+        mode: 'cors',
+        headers: { 
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          user_id: systemId,
+          pts: 1
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          writeConsole("✅ REWARD CLAIMED SUCCESSFULLY!", true);
+        } else {
+          writeConsole("⚡ REWARD PROCESSED", true);
+        }
+        setTimeout(() => {
+          if (tg.close) tg.close();
+        }, 1200);
+      })
+      .catch(err => {
+        console.error("Reward API Error:", err);
+        writeConsole("⚡ CLOSING TERMINAL...", true);
+        setTimeout(() => {
+          if (tg.close) tg.close();
+        }, 1200);
+      });
+    }
+  </script>
+</body>
+</html>
